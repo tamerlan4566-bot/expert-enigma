@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чертоги разума</title>
+    <!-- Связь с манифестом -->
+    <link rel="manifest" href="./1manifest.json">
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #d4d4d4;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 {
+            color: #569cd6; 
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            background-color: #1e1e1e;
+            color: #00ffcc;
+            border: 1px solid #333;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            resize: none;
+            margin-bottom: 10px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #569cd6;
+        }
+        button {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #569cd6;
+            padding: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            width: 100%;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        button:active {
+            background-color: #569cd6;
+            color: #000;
+        }
+        .reset-btn {
+            border-color: #f44336;
+            color: #f44336;
+        }
+        .reset-btn:active {
+            background-color: #f44336;
+            color: #fff;
+        }
+        #notes-container {
+            margin-top: 10px;
+        }
+        .note {
+            background-color: #141414;
+            border-left: 3px solid #569cd6;
+            padding: 12px;
+            margin-bottom: 15px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        .note-time {
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>[ Секретный Архив ]</h1>
+    <textarea id="noteInput" placeholder="Введи новую мысль..."></textarea>
+    <button id="saveBtn">Записать в память</button>
+    <button id="resetBtn" class="reset-btn">Сброс кэша</button>
+
+    <div id="notes-container"></div>
+
+    <script>
+        const input = document.getElementById('noteInput');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const container = document.getElementById('notes-container');
+
+        const hackChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&?!';
+
+        function getSafeNotes() {
+            try {
+                const data = localStorage.getItem('mindPalace');
+                return data ? JSON.parse(data) : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function decryptText(element, originalText) {
+            if (!originalText || typeof originalText !== 'string') {
+                element.innerText = originalText;
+                return;
+            }
+            
+            let iterations = 0;
+            const maxIterations = 35;
+            
+            const interval = setInterval(() => {
+                element.innerText = originalText.split('').map((letter, index) => {
+                    if (index < iterations) return originalText[index];
+                    if (letter === ' ') return ' ';
+                    return hackChars[Math.floor(Math.random() * hackChars.length)];
+                }).join('');
+
+                iterations += originalText.length / maxIterations;
+
+                if (iterations >= originalText.length) {
+                    clearInterval(interval);
+                    element.innerText = originalText;
+                }
+            }, 60);
+        }
+
+        function loadNotes() {
+            container.innerHTML = '';
+            const notes = getSafeNotes();
+
+            notes.forEach(noteData => {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note';
+                
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'note-time';
+                timeDiv.textContent = noteData.time || 'Неизвестно';
+                
+                const textDiv = document.createElement('div');
+                textDiv.textContent = ''; 
+
+                noteDiv.appendChild(timeDiv);
+                noteDiv.appendChild(textDiv);
+                container.appendChild(noteDiv);
+
+                decryptText(textDiv, noteData.text);
+            });
+        }
+
+        saveBtn.addEventListener('click', () => {
+            const text = input.value.trim();
+            if (text) {
+                const notes = getSafeNotes();
+                const newNote = {
+                    text: text,
+                    time: new Date().toLocaleString('ru-RU')
+                };
+                notes.unshift(newNote); 
+                
+                try {
+                    localStorage.setItem('mindPalace', JSON.stringify(notes));
+                    input.value = ''; 
+                    loadNotes(); 
+                } catch (e) {
+                    alert("Системная ошибка устройства при сохранении памяти.");
+                }
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            localStorage.removeItem('mindPalace');
+            loadNotes();
+            alert("Память принудительно очищена.");
+        });
+
+        loadNotes();
+
+        // Запуск офлайн-режима
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./1sw.js');
+        }
+    </script>
+</body>
+</html>
